@@ -76,6 +76,8 @@ class Explosion:
     def draw(self, screen):
         screen.blit(explosion_images[self.image_index], (self.x, self.y))
 
+
+#game loop
 while running:
     # Обработка событий
     for event in pygame.event.get():
