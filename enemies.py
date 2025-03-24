@@ -5,13 +5,20 @@ import math
 import sys
 
 # Класс пули игрока
-class HeroBullet:
-    def __init__(self, x, y, speed, damage):
+class HeroBullet(pygame.sprite.Sprite):
+    def __init__(self, x, y, speed=1, damage=1):
+        pygame.sprite.Sprite.__init__(self)
         self.x = x
         self.y = y
         self.speed = speed
         self.active = True
         self.damage = damage
+        self.image = pygame.Surface((5, 5))
+        self.image.fill((255, 0, 0))
+        self.rect = self.image.get_rect()
+        self.rect.x = self.x
+        self.rect.y = self.y
+        print("bulletspawn pos:", self.rect)
 
     def move(self):
         self.x += self.speed
@@ -19,11 +26,12 @@ class HeroBullet:
             self.active = False
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (0, 0, 0), (self.x, self.y, 10, 5))
+        pygame.draw.rect(screen, (0, 0, 0), (self.rect.x, self.rect.y, 10, 5))
 
 # Класс пули врага
-class EnemyBullet:
+class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, damage):
+        pygame.sprite.Sprite.__init__(self)
         self.x = x
         self.y = y
         self.speed = speed
@@ -109,8 +117,9 @@ class SpreadBullet:
         pygame.draw.rect(screen, RED, (self.x, self.y, 10, 10))
 
 # Класс врага Enemy1
-class Enemy1:
-    def __init__(self, x, y, size, speed, health):
+class Enemy1(pygame.sprite.Sprite):
+    def __init__(self, x, y, size=2, speed=2, health=3):
+        pygame.sprite.Sprite.__init__(self)
         self.x = x
         self.y = y
         self.size = size
@@ -138,7 +147,7 @@ class Enemy1:
             pygame.image.load("C:/Users/Bruker/Documents/GitHub/spillutvikling-fedir-og-vova/enemyframes/en1_D4.png")
         ]
 
-    def move_towards_hero(self, hero_x, hero_y):
+    def move(self, hero_x, hero_y):
         if self.state == "moving":
             if self.x < hero_x:
                 self.x += self.speed * 0.8
@@ -167,15 +176,16 @@ class Enemy1:
                 bullet_speed = -10 if self.facing_left else 10
                 bullets.append(EnemyBullet(bullet_x, bullet_y, bullet_speed, damage=10))
 
-    def update_state(self):
+ 
+    def update(self, hero_x, hero_y):
         if self.is_dead:
             return
-
+        self.move(hero_x, hero_y)  # Обновление позиции
         current_time = time.time()
         if current_time - self.last_state_change > self.state_change_interval:
             self.state = "shooting" if self.state == "moving" else "moving"
             self.last_state_change = current_time
-            self.state_change_interval = random.uniform(2, 5)
+            self.state_change_interval = random.uniform(1, 2)
 
     def check_collision(self, bullets):
         if self.is_dead:
