@@ -22,24 +22,42 @@ class HeroBullet(pygame.sprite.Sprite):
 
     def move(self):
         self.x += self.speed
+        self.rect.x = self.x
         if self.x < 0 or self.x > 800:  # Ширина экрана фиксирована для примера
             self.active = False
+            
+    def update(self):
+        self.move()
 
     def draw(self, screen):
         pygame.draw.rect(screen, (0, 0, 0), (self.rect.x, self.rect.y, 10, 5))
 
 # Класс пули врага
 class EnemyBullet(pygame.sprite.Sprite):
-    def __init__(self, x, y, speed, damage):
+    def __init__(self, x, y, direction, speed=2, damage=1):
         pygame.sprite.Sprite.__init__(self)
         self.x = x
         self.y = y
         self.speed = speed
         self.active = True
         self.damage = damage
+        self.direction = direction
+        self.image = pygame.Surface((5, 5))
+        self.image.fill((255, 0, 0))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        
+        
+        
 
-    def move(self):
-        self.x += self.speed
+    def update(self):
+        if self.direction == True:
+            self.x += self.speed
+        elif self.direction == False:
+            self.x -= self.speed
+        
+        
         if self.x < 0 or self.x > 800:
             self.active = False
 
@@ -118,7 +136,7 @@ class SpreadBullet:
 
 # Класс врага Enemy1
 class Enemy1(pygame.sprite.Sprite):
-    def __init__(self, x, y, size=2, speed=2, health=3):
+    def __init__(self, x, y, size=2, speed=2, health=3, bgroup="hero_bullet_group", egroup="enemy_bullet_group"):
         pygame.sprite.Sprite.__init__(self)
         self.x = x
         self.y = y
@@ -130,10 +148,13 @@ class Enemy1(pygame.sprite.Sprite):
         self.state_change_interval = random.uniform(1, 3)  # Интервал 1-3 секунды
         self.animation_index = 0
         self.last_animation_time = time.time()
-        self.facing_left = True
+        self.direction = True
         self.death_animation_index = 0
         self.is_dead = False
         self.shoot_animation_time = time.time()
+        self.bgroup = bgroup
+        self.egroup = egroup
+        
         self.walk_frames = [
             pygame.image.load("C:/Users/Bruker/Documents/GitHub/spillutvikling-fedir-og-vova/enemyframes/en1_W1.png"),
             pygame.image.load("C:/Users/Bruker/Documents/GitHub/spillutvikling-fedir-og-vova/enemyframes/en1_W2.png"),
@@ -146,64 +167,11 @@ class Enemy1(pygame.sprite.Sprite):
             pygame.image.load("C:/Users/Bruker/Documents/GitHub/spillutvikling-fedir-og-vova/enemyframes/en1_D3.png"),
             pygame.image.load("C:/Users/Bruker/Documents/GitHub/spillutvikling-fedir-og-vova/enemyframes/en1_D4.png")
         ]
-
-    def move(self, hero_x, hero_y):
-        if self.state == "moving":
-            if self.x < hero_x:
-                self.x += self.speed * 0.8
-                self.facing_left = False
-            elif self.x > hero_x:
-                self.x -= self.speed * 0.8
-                self.facing_left = True
-
-            if self.y < hero_y:
-                self.y += self.speed * 0.4
-            elif self.y > hero_y:
-                self.y -= self.speed * 0.4
-
-            current_time = time.time()
-            if current_time - self.last_animation_time > 0.2:
-                self.animation_index = (self.animation_index + 1) % len(self.walk_frames)
-                self.last_animation_time = current_time
-
-    def shoot(self, bullets):
-        if self.state == "shooting":
-            current_time = time.time()
-            if current_time - self.shoot_animation_time > 0.15:
-                self.shoot_animation_time = current_time
-                bullet_x = self.x if self.facing_left else self.x + self.size
-                bullet_y = self.y + self.size // 2
-                bullet_speed = -10 if self.facing_left else 10
-                bullets.append(EnemyBullet(bullet_x, bullet_y, bullet_speed, damage=10))
-
- 
-    def update(self, hero_x, hero_y):
-        if self.is_dead:
-            return
-        self.move(hero_x, hero_y)  # Обновление позиции
-        current_time = time.time()
-        if current_time - self.last_state_change > self.state_change_interval:
-            self.state = "shooting" if self.state == "moving" else "moving"
-            self.last_state_change = current_time
-            self.state_change_interval = random.uniform(1, 2)
-
-    def check_collision(self, bullets):
-        if self.is_dead:
-            return False
-
-        for bullet in bullets:
-            if self.x < bullet.x < self.x + self.size and self.y < bullet.y < self.y + self.size:
-                self.health -= bullet.damage
-                bullets.remove(bullet)
-                if self.health <= 0:
-                    self.state = "dying"
-                    self.is_dead = True
-                    self.death_animation_index = 0
-                    self.last_animation_time = time.time()
-                return True
-        return False
-
-    def draw(self, screen):
+        self.image = self.walk_frames[0]
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (self.x, self.y)
+        
+    def draw(self, screen, direction):
         if self.state == "dying":
             if self.death_animation_index < len(self.death_frames):
                 current_time = time.time()
@@ -216,11 +184,72 @@ class Enemy1(pygame.sprite.Sprite):
 
         current_frame = self.walk_frames[self.animation_index] if self.state == "moving" else self.walk_frames[0]
 
-        if self.facing_left:
+        if direction:
             screen.blit(current_frame, (self.x, self.y))
         else:
             flipped_frame = pygame.transform.flip(current_frame, True, False)
             screen.blit(flipped_frame, (self.x, self.y))
+
+
+    def move(self, hero_x, hero_y, egroup, direction):
+        if self.state == "moving":
+            if self.x < hero_x:
+                self.x += self.speed * 0.8
+                self.direction = False
+            elif self.x > hero_x:
+                self.x -= self.speed * 0.8
+                self.direction = True
+
+            if self.y < hero_y:
+                self.y += self.speed * 0.4
+            elif self.y > hero_y:
+                self.y -= self.speed * 0.4
+            
+            self.rect.topleft = (self.x, self.y)
+            
+            
+
+            current_time = time.time()
+            if current_time - self.last_animation_time > 0.2:
+                self.animation_index = (self.animation_index + 1) % len(self.walk_frames)
+                self.last_animation_time = current_time
+                
+        if self.state == "shooting":
+
+
+            egroup.add(EnemyBullet(self.x, self.y, direction))
+
+
+    def update(self, hero_x, hero_y, bgroup, egroup, screen):
+        direction = True
+        if self.is_dead:
+            self.draw(screen, direction)
+            return
+        self.check_collision(bgroup)
+        self.move(hero_x, hero_y, egroup, direction)  # Обновление позиции
+        current_time = time.time()
+        if current_time - self.last_state_change > self.state_change_interval:
+            self.state = "shooting" if self.state == "moving" else "moving"
+            self.last_state_change = current_time
+            self.state_change_interval = random.uniform(1, 2)
+        self.draw(screen, direction)
+        
+
+    def check_collision(self, bgroup):
+        if self.is_dead:
+            return False
+
+        collided_bullets = pygame.sprite.spritecollide(self, bgroup, True)  # True → удалить пулю при попадании
+        for bullet in collided_bullets:
+            self.health -= bullet.damage
+            if self.health <= 0:
+                self.state = "dying"
+                self.is_dead = True
+                self.death_animation_index = 0
+                self.last_animation_time = time.time()
+            return True
+        return False
+
 
 # Класс врага Enemy2
 class Enemy2:

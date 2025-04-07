@@ -1,6 +1,6 @@
 import pygame as pg
 import sys
-from level1 import *
+from meny import *
 
 class Cutscene:
     def __init__(self):

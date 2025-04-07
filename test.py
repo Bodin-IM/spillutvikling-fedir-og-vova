@@ -28,6 +28,8 @@ hero_bullets = []
 # Группы врагов
 enemy_group = pygame.sprite.Group()
 
+enemy_bullet_group = pygame.sprite.Group()
+
 
 # Группа всех пуль героя
 hero_bullet_group = pygame.sprite.Group()
@@ -40,23 +42,29 @@ enemy_group.add(gufi1)
 clock = pygame.time.Clock()
 running = True
 
+direction = 1
+
+
 while running:
     SCREEN.fill(WHITE)
 
+    keys = pygame.key.get_pressed()
     # Обработка событий
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:  # Выстрел вперёд
-                bullet = HeroBullet(hero_x, hero_y, 2, 7)
+                bullet = HeroBullet(hero_x, hero_y, direction*5, 1)
                 hero_bullet_group.add(bullet)
 
     # Управление героем
-    keys = pygame.key.get_pressed()
+    
     if keys[pygame.K_LEFT]:
+        direction = -1
         hero_x -= hero_speed
     if keys[pygame.K_RIGHT]:
+        direction = 1
         hero_x += hero_speed
     if keys[pygame.K_UP]:
         hero_y -= hero_speed
@@ -69,14 +77,18 @@ while running:
 
     # Обновление врагов (с учётом разных методов)
     for enemy in enemy_group:
-        enemy.update(hero_x, hero_y)
-        enemy.draw(SCREEN)
+        enemy.update(hero_x, hero_y, hero_bullet_group, enemy_bullet_group, SCREEN)
+        #enemy.draw(SCREEN)
 
 
 
     # Обновление пуль
     hero_bullet_group.update()
     hero_bullet_group.draw(SCREEN)
+    
+    enemy_bullet_group.update()
+    enemy_bullet_group.draw(SCREEN)
+
 
     # Отрисовка героя
     pygame.draw.rect(SCREEN, BLUE, (hero_x, hero_y, hero_size, hero_size))
